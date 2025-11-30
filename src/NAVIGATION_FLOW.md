@@ -1,0 +1,990 @@
+# 🗺️ Diagrama de Flujo de Navegación Detallado - PICIS
+
+## 📋 Tabla de Contenido
+- [Vista General del Sistema](#vista-general-del-sistema)
+- [Flujo de Autenticación](#flujo-de-autenticación)
+- [Roles de Análisis de Seguridad](#roles-de-análisis-de-seguridad)
+- [Roles de Autenticación](#roles-de-autenticación)
+- [Sistema de Aprobaciones](#sistema-de-aprobaciones)
+- [Flujos de Datos](#flujos-de-datos)
+
+---
+
+## 🎯 Vista General del Sistema
+
+```
+                          ┌──────────────────────────────────┐
+                          │      APLICACIÓN PICIS             │
+                          │   (Single Page Application)       │
+                          └────────────────┬─────────────────┘
+                                           │
+                                           ▼
+                          ┌──────────────────────────────────┐
+                          │         index.html               │
+                          │    (Punto de entrada único)      │
+                          └────────────────┬─────────────────┘
+                                           │
+                                           ▼
+                          ┌──────────────────────────────────┐
+                          │          App.tsx                 │
+                          │      (Componente raíz)           │
+                          └────────────────┬─────────────────┘
+                                           │
+                                           ▼
+                          ┌──────────────────────────────────┐
+                          │        AppProvider               │
+                          │    (Estado Global - Context)     │
+                          └────────────────┬─────────────────┘
+                                           │
+                                           ▼
+                          ┌──────────────────────────────────┐
+                          │       AppContent                 │
+                          │   (Enrutamiento Condicional)     │
+                          └────────────────┬─────────────────┘
+                                           │
+                    ┌──────────────────────┴──────────────────────┐
+                    │                                             │
+                    ▼                                             ▼
+         ¿Usuario Autenticado?                         ¿Usuario Autenticado?
+                   NO                                          SÍ
+                    │                                             │
+                    ▼                                             ▼
+         ┌──────────────────┐                   ┌──────────────────────────┐
+         │   LoginPage      │                   │   Enrutamiento por ROL   │
+         │                  │                   │                          │
+         └──────────────────┘                   └────────────┬─────────────┘
+                                                             │
+                        ┌────────────────────────────────────┴────────────────┐
+                        │                                                     │
+                        │           DASHBOARDS POR ROL                        │
+                        │                                                     │
+                        └─────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔐 Flujo de Autenticación
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        PROCESO DE AUTENTICACIÓN                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                              INICIO
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │    LoginPage.tsx      │
+                    │                       │
+                    │  ┌─────────────────┐  │
+                    │  │  Formulario     │  │
+                    │  │  - Correo       │  │
+                    │  │  - Contraseña   │  │
+                    │  └─────────────────┘  │
+                    └──────────┬────────────┘
+                               │
+                               │ Usuario presiona "Iniciar Sesión"
+                               ▼
+                    ┌───────────────────────┐
+                    │  AppContext.login()   │
+                    │                       │
+                    │  Valida credenciales  │
+                    │  contra usuarios      │
+                    │  predefinidos         │
+                    └──────────┬────────────┘
+                               │
+                   ┌───────────┴───────────┐
+                   │                       │
+              ✅ VÁLIDO                ❌ INVÁLIDO
+                   │                       │
+                   ▼                       ▼
+        ┌──────────────────┐    ┌──────────────────┐
+        │ setCurrentUser() │    │  toast.error()   │
+        │                  │    │  "Credenciales   │
+        │ Usuario guardado │    │   incorrectas"   │
+        │ en estado global │    │                  │
+        └────────┬─────────┘    └──────────────────┘
+                 │                       │
+                 │                       └─► Permanece en LoginPage
+                 ▼
+        ┌──────────────────┐
+        │  App.tsx detecta │
+        │  currentUser     │
+        │  no es null      │
+        └────────┬─────────┘
+                 │
+                 ▼
+        ┌──────────────────┐
+        │ renderDashboard()│
+        │                  │
+        │ Switch basado    │
+        │ en rol           │
+        └────────┬─────────┘
+                 │
+                 ▼
+        ┌──────────────────┐
+        │ Dashboard        │
+        │ correspondiente  │
+        │ al rol           │
+        └──────────────────┘
+```
+
+---
+
+## 📊 Roles de Análisis de Seguridad
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                 ROLES DE ANÁLISIS DE SEGURIDAD                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────┐        ┌──────────────────┐        ┌──────────────────┐
+│   SUPERVISOR     │        │    ANALISTA      │        │   RESPONSABLE    │
+│                  │        │                  │        │                  │
+└────────┬─────────┘        └────────┬─────────┘        └────────┬─────────┘
+         │                           │                           │
+         └───────────────────────────┴───────────────────────────┘
+                                     │
+                                     ▼
+                         ┌──────────────────────┐
+                         │   Dashboard.tsx      │
+                         │                      │
+                         │  ┌────────────────┐  │
+                         │  │  VISTA DE      │  │
+                         │  │  ANÁLISIS      │  │
+                         │  └────────────────┘  │
+                         └──────────┬───────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+                    ▼               ▼               ▼
+         ┌──────────────┐  ┌───────────────┐  ┌──────────────┐
+         │ Ver Análisis │  │ Ver Reportes  │  │  Comentarios │
+         │ del Grupo    │  │               │  │              │
+         └──────────────┘  └───────────────┘  └──────────────┘
+                    │
+                    │
+        ┌───────────┴───────────┐
+        │                       │
+        ▼                       ▼
+┌──────────────┐        ┌──────────────┐
+│ Supervisor:  │        │ Analista:    │
+│ - Crear      │        │ - Crear      │
+│ - Editar     │        │ - Editar     │
+│ - Eliminar   │        │              │
+└──────────────┘        └──────────────┘
+                                │
+                                ▼
+                        ┌──────────────┐
+                        │ Responsable: │
+                        │ - Solo Ver   │
+                        └──────────────┘
+
+
+┌────────────────────────────────────────────────────────────┐
+│  FUNCIONALIDADES DISPONIBLES POR ROL                       │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  Acción              │ Supervisor │ Analista │ Responsable│
+│  ────────────────────┼────────────┼──────────┼────────────│
+│  Ver Análisis        │     ✅     │    ✅    │     ✅     │
+│  Crear Análisis      │     ✅     │    ✅    │     ❌     │
+│  Editar Análisis     │     ✅     │    ✅    │     ❌     │
+│  Eliminar Análisis   │     ✅     │    ❌    │     ❌     │
+│  Ver Reportes        │     ✅     │    ✅    │     ✅     │
+│  Agregar Comentarios │     ✅     │    ✅    │     ✅     │
+│  Editar Comentarios  │  ✅ (prop) │ ✅ (prop)│  ✅ (prop) │
+│                                                            │
+│  * (prop) = Solo sus propios comentarios                   │
+└────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔑 Roles de Autenticación
+
+### Entidades Humanas
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    GESTIÓN DE ENTIDADES HUMANAS                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────────────┐
+│                          GESTOR                                       │
+│            Gestor de autenticación de entidades humanas               │
+└─────────────────────────────┬─────────────────────────────────────────┘
+                              │
+                              ▼
+              ┌──────────────────────────────────┐
+              │  AuthManagerHumanDashboard.tsx   │
+              └────────────────┬─────────────────┘
+                               │
+         ┌─────────────────────┼─────────────────────┐
+         │                     │                     │
+         ▼                     ▼                     ▼
+   ┌──────────┐         ┌──────────┐         ┌──────────┐
+   │ TAB 1    │         │ TAB 2    │         │ TAB 3    │
+   │ CLIENTES │         │ SISTEMA  │         │ EQUIPO   │
+   └────┬─────┘         └────┬─────┘         └────┬─────┘
+        │                    │                     │
+        │                    │                     │
+        ▼                    ▼                     ▼
+   ┌─────────┐         ┌─────────┐         ┌─────────┐
+   │ Agregar │         │ Agregar │         │ Agregar │
+   │ Editar  │         │ Editar  │         │ Editar  │
+   │ Eliminar│         │ Eliminar│         │ Eliminar│
+   │ Ver     │         │ Ver     │         │ Ver     │
+   └─────────┘         └─────────┘         └─────────┘
+        │                    │                     │
+        └────────────────────┼─────────────────────┘
+                             │
+                             │ Todas las acciones crean SOLICITUDES
+                             ▼
+                   ┌──────────────────┐
+                   │   SOLICITUD      │
+                   │   PENDIENTE      │
+                   └────────┬─────────┘
+                            │
+                            ▼
+
+
+┌───────────────────────────────────────────────────────────────────────┐
+│                          SUPERVISOR                                   │
+│            Supervisor de entidades humanas                            │
+└─────────────────────────────┬─────────────────────────────────────────┘
+                              │
+                              ▼
+             ┌───────────────────────────────────┐
+             │ AuthSupervisorHumanDashboard.tsx  │
+             └────────────────┬──────────────────┘
+                              │
+         ┌────────────────────┼────────────────────┐
+         │                    │                    │
+         ▼                    ▼                    ▼
+   ┌──────────┐         ┌──────────┐         ┌──────────┐
+   │ TAB 1    │         │ TAB 2    │         │ TAB 3    │
+   │ CLIENTES │         │ SISTEMA  │         │ EQUIPO   │
+   └────┬─────┘         └────┬─────┘         └────┬─────┘
+        │                    │                     │
+        │                    │                     │
+        ▼                    ▼                     ▼
+   ┌─────────┐         ┌─────────┐         ┌─────────┐
+   │ Solo    │         │ Solo    │         │ Solo    │
+   │ VER     │         │ VER     │         │ VER     │
+   │ 👁️      │         │ 👁️      │         │ 👁️      │
+   └─────────┘         └─────────┘         └─────────┘
+        │
+        └───────────────────────────────────────┐
+                                                │
+                              ┌─────────────────┘
+                              │
+                              ▼
+                        ┌──────────┐
+                        │ TAB 4    │
+                        │SOLICITUDES│
+                        └────┬─────┘
+                             │
+                             ▼
+                   ┌──────────────────┐
+                   │ APROBAR          │
+                   │ RECHAZAR         │
+                   └──────────────────┘
+```
+
+### Entidades No Humanas
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   GESTIÓN DE ENTIDADES NO HUMANAS                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────────────┐
+│                          GESTOR                                       │
+│         Gestor de autenticación de entidades no humanas               │
+└─────────────────────────────┬─────────────────────────────────────────┘
+                              │
+                              ▼
+            ┌────────────────────────────────────┐
+            │ AuthManagerNonHumanDashboard.tsx   │
+            └──────────────┬─────────────────────┘
+                           │
+                           ▼
+              ┌──────────────────────────┐
+              │  LISTADO ENTIDADES       │
+              │  NO HUMANAS              │
+              │                          │
+              │  - Aplicaciones          │
+              │  - Servicios             │
+              │  - APIs                  │
+              │  - Bots                  │
+              │  - Procesos              │
+              └────────────┬─────────────┘
+                           │
+                           ▼
+                   ┌───────────────┐
+                   │  Agregar      │
+                   │  Editar       │
+                   │  Eliminar     │
+                   │  Ver          │
+                   └───────┬───────┘
+                           │
+                           │ Todas las acciones crean SOLICITUDES
+                           ▼
+                  ┌─────────────────┐
+                  │   SOLICITUD     │
+                  │   PENDIENTE     │
+                  └─────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────┐
+│                          SUPERVISOR                                   │
+│         Supervisor de entidades no humanas                            │
+└─────────────────────────────┬─────────────────────────────────────────┘
+                              │
+                              ▼
+           ┌──────────────────────────────────────┐
+           │ AuthSupervisorNonHumanDashboard.tsx  │
+           └────────────────┬─────────────────────┘
+                            │
+         ┌──────────────────┴──────────────────┐
+         │                                     │
+         ▼                                     ▼
+   ┌──────────┐                        ┌──────────┐
+   │ TAB 1    │                        │ TAB 2    │
+   │ENTIDADES │                        │SOLICITUDES│
+   └────┬─────┘                        └────┬─────┘
+        │                                    │
+        ▼                                    ▼
+   ┌─────────┐                      ┌──────────────┐
+   │ Solo    │                      │ APROBAR      │
+   │ VER     │                      │ RECHAZAR     │
+   │ 👁️      │                      └──────────────┘
+   └─────────┘
+```
+
+### Responsable de Autenticación
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   RESPONSABLE DE AUTENTICACIÓN                           │
+│                      (Aprobación Final)                                  │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                              ▼
+              ┌────────────────────────────────┐
+              │ AuthResponsibleDashboard.tsx   │
+              └─────────────┬──────────────────┘
+                            │
+                            ▼
+              ┌──────────────────────────────┐
+              │  TODAS LAS SOLICITUDES       │
+              │  DEL SISTEMA                 │
+              │                              │
+              │  - E. Humanas                │
+              │  - E. No Humanas             │
+              │                              │
+              │  Estado:                     │
+              │  ✅ Aprobadas por supervisores│
+              │  ⏳ Pendiente su aprobación   │
+              └─────────────┬────────────────┘
+                            │
+                            ▼
+                ┌────────────────────────┐
+                │  VER TODAS             │
+                │  FILTRAR POR ESTADO    │
+                │  VER HISTORIAL         │
+                └────────┬───────────────┘
+                         │
+                         ▼
+            ┌─────────────────────────────┐
+            │  APROBAR → EJECUTA ACCIÓN   │
+            │  RECHAZAR → CANCELA TODO    │
+            └─────────────────────────────┘
+```
+
+---
+
+## 🔄 Sistema de Aprobaciones
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│              FLUJO COMPLETO DE APROBACIÓN MULTINIVEL                     │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                              INICIO
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │   GESTOR              │
+                    │   Crea Solicitud      │
+                    └──────────┬────────────┘
+                               │
+                               ▼
+                    ┌───────────────────────┐
+                    │  createRequest()      │
+                    │                       │
+                    │  Solicitud creada:    │
+                    │  - ID único           │
+                    │  - Tipo               │
+                    │  - Solicitante        │
+                    │  - Fecha              │
+                    │  - Estado: pendiente  │
+                    │  - Detalles           │
+                    │  - Aprobaciones: {    │
+                    │      supervisores: [] │
+                    │      responsables: [] │
+                    │    }                  │
+                    └──────────┬────────────┘
+                               │
+                               ▼
+                ┌──────────────────────────────┐
+                │  NIVEL 1: SUPERVISORES       │
+                └──────────────┬───────────────┘
+                               │
+        ┌──────────────────────┼──────────────────────┐
+        │                      │                      │
+        ▼                      ▼                      ▼
+┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+│ Supervisor 1 │      │ Supervisor 2 │      │ Supervisor N │
+│   APRUEBA    │      │   APRUEBA    │      │   APRUEBA    │
+└──────┬───────┘      └──────┬───────┘      └──────┬───────┘
+       │                     │                      │
+       └─────────────────────┼──────────────────────┘
+                             │
+                             ▼
+              ┌──────────────────────────────┐
+              │  ¿TODOS los supervisores     │
+              │  correspondientes aprobaron? │
+              └───────────┬──────────────────┘
+                          │
+                  ┌───────┴────────┐
+                  │                │
+                 SÍ               NO
+                  │                │
+                  ▼                ▼
+      ┌───────────────────┐  ┌─────────────┐
+      │ Continúa a Nivel 2│  │ Espera más  │
+      └─────────┬─────────┘  │ aprobaciones│
+                │             └─────────────┘
+                ▼
+      ┌──────────────────────────────┐
+      │  NIVEL 2: RESPONSABLES       │
+      └──────────────┬───────────────┘
+                     │
+    ┌────────────────┼────────────────┐
+    │                │                │
+    ▼                ▼                ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│Responsable 1 │  │Responsable 2 │  │Responsable N │
+│   APRUEBA    │  │   APRUEBA    │  │   APRUEBA    │
+└──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+       │                 │                 │
+       └─────────────────┼─────────────────┘
+                         │
+                         ▼
+        ┌──────────────────────────────────┐
+        │  ¿TODOS los responsables         │
+        │  aprobaron?                      │
+        └────────────┬─────────────────────┘
+                     │
+            ┌────────┴─────────┐
+            │                  │
+           SÍ                 NO
+            │                  │
+            ▼                  ▼
+  ┌───────────────────┐  ┌─────────────┐
+  │ ✅ APROBACIÓN     │  │ Espera más  │
+  │    COMPLETA       │  │ aprobaciones│
+  └─────────┬─────────┘  └─────────────┘
+            │
+            ▼
+  ┌───────────────────────┐
+  │ executeRequestAction()│
+  │                       │
+  │ EJECUTA ACCIÓN:       │
+  │ - Agregar             │
+  │ - Editar              │
+  │ - Eliminar            │
+  └─────────┬─────────────┘
+            │
+            ▼
+  ┌───────────────────────┐
+  │ Estado: "aprobada"    │
+  │                       │
+  │ Cambios aplicados     │
+  │ al estado global      │
+  │                       │
+  │ Todas las vistas      │
+  │ se actualizan         │
+  └───────────────────────┘
+            │
+            ▼
+          FIN
+
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                        FLUJO DE RECHAZO                              │
+└─────────────────────────────────────────────────────────────────────┘
+
+En CUALQUIER nivel, si UN supervisor o responsable RECHAZA:
+
+                    ┌───────────────────┐
+                    │  RECHAZAR         │
+                    │  (+ Razón)        │
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │ rejectRequest()   │
+                    │                   │
+                    │ Estado: rechazada │
+                    │ NO ejecuta acción │
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │ Notifica al Gestor│
+                    │ con razón         │
+                    └───────────────────┘
+                              │
+                              ▼
+                            FIN
+```
+
+---
+
+## 📈 Flujos de Datos
+
+### Flujo de Creación de Entidad
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│           FLUJO DE DATOS: CREACIÓN DE ENTIDAD                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+    Usuario                Modal              Context           Estado Global
+      │                     │                    │                    │
+      │  Click "Agregar"    │                    │                    │
+      ├────────────────────►│                    │                    │
+      │                     │                    │                    │
+      │                     │  Modal se abre     │                    │
+      │                     │  con formulario    │                    │
+      │                     │                    │                    │
+      │  Llena formulario   │                    │                    │
+      ├────────────────────►│                    │                    │
+      │                     │                    │                    │
+      │  Click "Enviar"     │                    │                    │
+      ├────────────────────►│                    │                    │
+      │                     │                    │                    │
+      │                     │ Valida datos       │                    │
+      │                     │                    │                    │
+      │                     │ createRequest()    │                    │
+      │                     ├───────────────────►│                    │
+      │                     │                    │                    │
+      │                     │                    │ Crea solicitud     │
+      │                     │                    ├───────────────────►│
+      │                     │                    │                    │
+      │                     │                    │ requests.push()    │
+      │                     │                    │                    │
+      │                     │  Notificación      │                    │
+      │◄────────────────────┤  "Enviado"         │                    │
+      │                     │                    │                    │
+      │                     │  Modal se cierra   │                    │
+      │                     │                    │                    │
+      
+      
+      ... TIEMPO PASA (Aprobaciones) ...
+      
+      
+      │                     │                    │                    │
+      │                     │                    │ approveRequest()   │
+      │                     │                    │ (múltiples veces)  │
+      │                     │                    │                    │
+      │                     │                    │ Cuando todos       │
+      │                     │                    │ aprueban:          │
+      │                     │                    │                    │
+      │                     │                    │executeRequestAction│
+      │                     │                    ├──────────►         │
+      │                     │                    │           │        │
+      │                     │                    │           ▼        │
+      │                     │                    │    Agrega entidad  │
+      │                     │                    │    a la lista      │
+      │                     │                    │    correspondiente │
+      │                     │                    │                    │
+      │                     │                    │ Notifica cambios   │
+      │◄────────────────────┴────────────────────┴────────────────────┤
+      │                                                                │
+      │  Vista actualizada automáticamente (React re-render)          │
+      │                                                                │
+```
+
+### Flujo de Sincronización (Equipo ↔ Sistema)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│      FLUJO DE SINCRONIZACIÓN: AGREGAR AL EQUIPO                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                    Gestor agrega miembro al equipo
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │ createRequest()      │
+                    │ Tipo: "agregar       │
+                    │ entidad al equipo"   │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ... Flujo de aprobación ...
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │executeRequestAction()│
+                    └──────────┬───────────┘
+                               │
+                ┌──────────────┼──────────────┐
+                │              │              │
+                ▼              ▼              ▼
+       ┌────────────┐  ┌─────────────┐  ┌────────────┐
+       │ Paso 1:    │  │ Paso 2:     │  │ Paso 3:    │
+       │ Crear      │  │ Agregar a   │  │ Crear copia│
+       │ entidad    │  │ teamMembers │  │ en         │
+       │            │  │             │  │ systemUsers│
+       └────────────┘  └─────────────┘  └────────────┘
+                               │
+                               ▼
+              ┌──────────────────────────────┐
+              │  SINCRONIZACIÓN COMPLETA     │
+              │                              │
+              │  teamMembers: [..., nuevo]   │
+              │  systemUsers: [..., nuevo]   │
+              └──────────────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│      FLUJO DE SINCRONIZACIÓN: EDITAR MIEMBRO DEL EQUIPO                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+                    Gestor edita miembro del equipo
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │ createRequest()      │
+                    │ Tipo: "editar        │
+                    │ entidad del equipo"  │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ... Flujo de aprobación ...
+                               │
+                               ▼
+                    ┌──────────────────────┐
+                    │executeRequestAction()│
+                    └──────────┬───────────┘
+                               │
+                ┌──────────────┼──────────────┐
+                │              │              │
+                ▼              ▼              ▼
+       ┌────────────┐  ┌─────────────┐  ┌────────────┐
+       │ Paso 1:    │  │ Paso 2:     │  │ Paso 3:    │
+       │ Actualizar │  │ Buscar en   │  │ Actualizar │
+       │ en team    │  │ system por  │  │ en system  │
+       │ Members    │  │ correo      │  │ Users      │
+       └────────────┘  └─────────────┘  └────────────┘
+                               │
+                               ▼
+              ┌──────────────────────────────┐
+              │  SINCRONIZACIÓN COMPLETA     │
+              │                              │
+              │  Ambas listas actualizadas   │
+              │  con los mismos datos        │
+              └──────────────────────────────┘
+```
+
+### Flujo de Actualización de Vista
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│              FLUJO DE ACTUALIZACIÓN AUTOMÁTICA DE VISTAS                 │
+└─────────────────────────────────────────────────────────────────────────┘
+
+         Estado cambia en AppContext
+                    │
+                    ▼
+         ┌──────────────────────┐
+         │  React Context       │
+         │  notifica cambios    │
+         └──────────┬───────────┘
+                    │
+                    │ Todos los componentes que usan useApp()
+                    │ reciben la actualización automáticamente
+                    │
+      ┌─────────────┼─────────────┬─────────────────┐
+      │             │             │                 │
+      ▼             ▼             ▼                 ▼
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐
+│Dashboard │  │ Gestor   │  │Supervisor│  │Responsable │
+│          │  │ Dashboard│  │Dashboard │  │  Dashboard │
+└────┬─────┘  └────┬─────┘  └────┬─────┘  └─────┬──────┘
+     │             │             │               │
+     ▼             ▼             ▼               ▼
+  Re-render    Re-render    Re-render        Re-render
+     │             │             │               │
+     └─────────────┴─────────────┴───────────────┘
+                    │
+                    ▼
+         ┌──────────────────────┐
+         │  Todas las vistas    │
+         │  muestran datos      │
+         │  actualizados        │
+         │  instantáneamente    │
+         └──────────────────────┘
+```
+
+---
+
+## 🔐 Matriz de Permisos
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    MATRIZ DE PERMISOS COMPLETA                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────────────┐
+│ ANÁLISIS DE SEGURIDAD                                                 │
+├───────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  Funcionalidad         │ Supervisor │ Analista │ Responsable         │
+│  ──────────────────────┼────────────┼──────────┼────────────         │
+│  Ver análisis          │     ✅     │    ✅    │     ✅              │
+│  Crear análisis        │     ✅     │    ✅    │     ❌              │
+│  Editar análisis       │     ✅     │    ✅    │     ❌              │
+│  Eliminar análisis     │     ✅     │    ❌    │     ❌              │
+│  Ver reportes          │     ✅     │    ✅    │     ✅              │
+│  Comentar análisis     │     ✅     │    ✅    │     ✅              │
+│  Editar comentarios    │  propio    │  propio  │   propio            │
+│  Cambiar estado        │     ✅     │    ✅    │     ❌              │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────┐
+│ ENTIDADES HUMANAS                                                     │
+├───────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  Funcionalidad         │ Gestor │ Supervisor │ Responsable Auth     │
+│  ──────────────────────┼────────┼────────────┼─────────────         │
+│  Ver clientes          │   ✅   │     ✅     │       ✅             │
+│  Agregar cliente       │   ✅   │     ❌     │       ❌             │
+│  Editar cliente        │   ✅   │     ❌     │       ❌             │
+│  Eliminar cliente      │   ✅   │     ❌     │       ❌             │
+│                        │        │            │                      │
+│  Ver cuentas cliente   │   ✅   │     ✅     │       ✅             │
+│  Agregar cuenta        │   ✅   │     ❌     │       ❌             │
+│  Editar cuenta         │   ✅   │     ❌     │       ❌             │
+│  Eliminar cuenta       │   ✅   │     ❌     │       ❌             │
+│                        │        │            │                      │
+│  Ver sistema           │   ✅   │     ✅     │       ✅             │
+│  Agregar a sistema     │   ✅   │     ❌     │       ❌             │
+│  Editar sistema        │   ✅   │     ❌     │       ❌             │
+│  Eliminar de sistema   │   ✅   │     ❌     │       ❌             │
+│                        │        │            │                      │
+│  Ver equipo            │   ✅   │     ✅     │       ✅             │
+│  Agregar a equipo      │   ✅   │     ❌     │       ❌             │
+│  Editar equipo         │   ✅   │     ❌     │       ❌             │
+│  Eliminar de equipo    │   ✅   │     ❌     │       ❌             │
+│                        │        │            │                      │
+│  Aprobar solicitudes   │   ❌   │     ✅     │   ✅ (final)         │
+│  Rechazar solicitudes  │   ❌   │     ✅     │   ✅ (final)         │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────┐
+│ ENTIDADES NO HUMANAS                                                  │
+├───────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  Funcionalidad         │ Gestor │ Supervisor │ Responsable Auth     │
+│  ──────────────────────┼────────┼────────────┼─────────────         │
+│  Ver entidades         │   ✅   │     ✅     │       ✅             │
+│  Agregar entidad       │   ✅   │     ❌     │       ❌             │
+│  Editar entidad        │   ✅   │     ❌     │       ❌             │
+│  Eliminar entidad      │   ✅   │     ❌     │       ❌             │
+│                        │        │            │                      │
+│  Aprobar solicitudes   │   ❌   │     ✅     │   ✅ (final)         │
+│  Rechazar solicitudes  │   ❌   │     ✅     │   ✅ (final)         │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📱 Mapa de Navegación por Componente
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    MAPA DE NAVEGACIÓN COMPLETO                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+App.tsx
+  │
+  ├─ LoginPage.tsx
+  │    │
+  │    └─ [Usuario ingresa credenciales]
+  │         │
+  │         └─ Login exitoso → Redirección según rol
+  │
+  ├─ Dashboard.tsx (Supervisor, Analista, Responsable)
+  │    │
+  │    ├─ NewAnalysisModal.tsx
+  │    ├─ ReportModal.tsx
+  │    └─ CommentsModal.tsx
+  │
+  ├─ AuthManagerHumanDashboard.tsx
+  │    │
+  │    ├─ Tab: Clientes
+  │    │    ├─ Vista lista de clientes
+  │    │    │    ├─ AddClientModal.tsx
+  │    │    │    └─ [Click en cliente] → Vista cuentas del cliente
+  │    │    │
+  │    │    └─ Vista cuentas de cliente seleccionado
+  │    │         ├─ AddClientAccountModal.tsx
+  │    │         ├─ EditClientAccountModal.tsx
+  │    │         └─ [Botón Eliminar]
+  │    │
+  │    ├─ Tab: Sistema
+  │    │    ├─ AddSystemUserModal.tsx
+  │    │    ├─ EditSystemUserModal.tsx
+  │    │    └─ [Botón Eliminar]
+  │    │
+  │    └─ Tab: Equipo
+  │         ├─ AddTeamMemberModal.tsx
+  │         ├─ EditTeamMemberModal.tsx
+  │         └─ [Botón Eliminar]
+  │
+  ├─ AuthSupervisorHumanDashboard.tsx
+  │    │
+  │    ├─ Tab: Clientes (solo lectura)
+  │    ├─ Tab: Sistema (solo lectura)
+  │    ├─ Tab: Equipo (solo lectura)
+  │    └─ Tab: Solicitudes
+  │         └─ [Aprobar / Rechazar]
+  │
+  ├─ AuthManagerNonHumanDashboard.tsx
+  │    │
+  │    ├─ AddNonHumanEntityModal.tsx
+  │    ├─ EditNonHumanEntityModal.tsx
+  │    └─ [Botón Eliminar]
+  │
+  ├─ AuthSupervisorNonHumanDashboard.tsx
+  │    │
+  │    ├─ Tab: Entidades (solo lectura)
+  │    └─ Tab: Solicitudes
+  │         └─ [Aprobar / Rechazar]
+  │
+  └─ AuthResponsibleDashboard.tsx
+       │
+       └─ Vista de todas las solicitudes
+            └─ [Aprobar / Rechazar (aprobación final)]
+```
+
+---
+
+## 🎓 Guía de Navegación para Usuarios
+
+### Para Supervisor / Analista / Responsable
+
+```
+1. Iniciar sesión con credenciales
+   ↓
+2. Ver Dashboard principal
+   ↓
+3. Ver tabla de análisis de seguridad
+   ↓
+4. Opciones disponibles:
+   - Crear nuevo análisis (Supervisor/Analista)
+   - Ver reporte de análisis
+   - Ver/agregar comentarios
+   - Cambiar estado (Supervisor/Analista)
+   ↓
+5. Cerrar sesión (botón en esquina superior derecha)
+```
+
+### Para Gestor de Entidades Humanas
+
+```
+1. Iniciar sesión
+   ↓
+2. Ver dashboard con 3 tabs
+   ↓
+3. TAB CLIENTES:
+   - Ver lista de clientes
+   - Click en cliente → Ver sus cuentas
+   - Agregar/Editar/Eliminar
+   ↓
+4. TAB SISTEMA:
+   - Ver usuarios del sistema
+   - Agregar/Editar/Eliminar
+   ↓
+5. TAB EQUIPO:
+   - Ver miembros del equipo
+   - Agregar/Editar/Eliminar
+   ↓
+6. Todas las acciones crean SOLICITUDES
+   ↓
+7. Esperar aprobación
+   ↓
+8. Cerrar sesión
+```
+
+### Para Supervisor de Entidades
+
+```
+1. Iniciar sesión
+   ↓
+2. Ver dashboard (solo lectura)
+   ↓
+3. Navegar por tabs para ver información
+   ↓
+4. Ir a tab SOLICITUDES
+   ↓
+5. Ver solicitudes pendientes
+   ↓
+6. Para cada solicitud:
+   - Revisar detalles
+   - Decidir: Aprobar o Rechazar
+   ↓
+7. Click en botón correspondiente
+   ↓
+8. Si TODOS aprueban → Pasa a Responsable
+   Si UNO rechaza → Solicitud cancelada
+   ↓
+9. Cerrar sesión
+```
+
+### Para Responsable de Autenticación
+
+```
+1. Iniciar sesión
+   ↓
+2. Ver dashboard con TODAS las solicitudes
+   ↓
+3. Filtrar por estado (pendientes/aprobadas/rechazadas)
+   ↓
+4. Ver solicitudes ya aprobadas por supervisores
+   ↓
+5. Para cada solicitud:
+   - Revisar detalles
+   - Revisar historial de aprobaciones
+   - Decidir: Aprobar (ejecuta) o Rechazar (cancela)
+   ↓
+6. Si APRUEBA → Acción se ejecuta inmediatamente
+   Si RECHAZA → Solicitud cancelada
+   ↓
+7. Cerrar sesión
+```
+
+---
+
+*Diagrama de flujo de navegación completo generado para PICIS v1.0*
